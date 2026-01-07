@@ -33,6 +33,19 @@ function init() {
   updateItemsLeft();
   setupEventListeners();
   renderTodos();
+  // Set initial filter state
+  setInitialFilterState();
+}
+
+// Set initial filter state for all filter buttons
+function setInitialFilterState() {
+  filterBtns.forEach(btn => {
+    if (btn.textContent === currentFilter) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
 }
 
 // Load todos from localStorage or existing HTML
@@ -213,6 +226,11 @@ function createTodoElement(todo) {
   const text = document.createElement('p');
   text.className = 'todo-text';
   text.textContent = todo.text;
+  // Prevent text selection on mobile during drag
+  text.style.userSelect = 'none';
+  text.style.webkitUserSelect = 'none';
+  text.style.webkitTouchCallout = 'none';
+  
   if (todo.completed) {
     text.style.textDecoration = 'line-through';
     text.style.opacity = '0.5';
@@ -257,6 +275,16 @@ function createTodoElement(todo) {
   container.addEventListener('drop', handleDrop);
   container.addEventListener('dragenter', handleDragEnter);
   container.addEventListener('dragleave', handleDragLeave);
+  
+  // Prevent default touch behavior that causes text selection/search on mobile
+  container.addEventListener('touchstart', (e) => {
+    // Allow touch to work but prevent text selection
+    e.currentTarget.style.cursor = 'grabbing';
+  }, { passive: true });
+  
+  container.addEventListener('touchend', (e) => {
+    e.currentTarget.style.cursor = 'pointer';
+  }, { passive: true });
 
   return container;
 }
@@ -267,6 +295,12 @@ function handleDragStart(e) {
   this.style.opacity = '0.4';
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/html', this.innerHTML);
+  
+  // Prevent text selection during drag
+  if (e.target.tagName === 'P') {
+    e.preventDefault();
+    return false;
+  }
 }
 
 function handleDragEnd(e) {
