@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- displays site properly based on user's device -->
+
+  <link rel="icon" type="image/png" sizes="32x32" href="./images/favicon-32x32.png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
+  
+  <title>Todo app</title>
+
+  <!-- Feel free to remove these styles or customise in your own stylesheet 👍 -->
+  <style>
+    .attribution { font-size: 11px; text-align: center; }
+    .attribution a { color: hsl(228, 45%, 44%); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <nav class="navbar">
+      <h1>TODO</h1>
+      <div class="theme-toggle">
+        <img src="images/icon-sun.svg" alt="light mode" class="toggle sun">
+        <img src="images/icon-moon.svg" alt="dark mode" class="toggle moon">
+      </div>
+    </nav>
+  </header>
+
+
+  <section>
+
+    <div class="Create">
+      <div class="rounded"></div>
+      <input type="text" placeholder="Create a new todo..." id="todo-input" class="input">
+    </div>
+
+
+    <div class="todo-list">
+
+
+
+
+
+<div class="mobile-version">
+  <div class="analytics">
+    <p class="items-left">5 items left</p>
+    <p class="clear-completed">Clear Completed</p>
+  </div>
+</div>
+
+
+<div class="desktop-version">
+  <div class="analytics">
+    <p class="items-left">5 items left</p>
+    <div class="filters">
+      <p class="filter active">All</p>
+      <p class="filter">Active</p>
+      <p class="filter">Completed</p>
+    </div>
+    <p class="clear-completed">Clear Completed</p>
+  </div>
+</div>
+
+
+    </div>
+
+<div class="mobile-version">
+  <div class="filters">
+    <p class="filter active">All</p>
+    <p class="filter">Active</p>
+    <p class="filter">Completed</p>
+  </div>
+</div>
+
+
+
+    <div class="Instruction">
+      <p>Drag and drop to reorder list</p>
+    </div>
+  </section>
+
+
+
+ 
+
+
+
+  <script src="script.js"></script>
+</body>
+</html>
