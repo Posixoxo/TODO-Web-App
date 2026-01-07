@@ -203,7 +203,7 @@ function createTodoElement(todo) {
     const checkmark = document.createElement('img');
     checkmark.src = 'images/icon-check.svg';
     checkmark.alt = 'check';
-    checkmark.style.cssText = 'width: 100%; height: 100%; display: block; object-fit: contain;';
+    checkmark.style.cssText = 'width: 50%; height: 50%; display: block; max-width: 100%; margin: 7px auto; object-fit: contain;';
     rounded.appendChild(checkmark);
     rounded.style.background = 'linear-gradient(hsl(280, 87%, 65%), hsl(192, 100%, 67%))';
     rounded.style.border = 'none';
