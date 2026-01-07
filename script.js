@@ -30,17 +30,19 @@ let draggedElement = null;
 function init() {
   // Load todos from localStorage or use existing HTML todos
   loadTodos();
-  updateItemsLeft();
   setupEventListeners();
   renderTodos();
-  // Set initial filter state
-  setInitialFilterState();
+  updateItemsLeft();
+  // Set initial filter state - must be called AFTER everything is set up
+  setTimeout(() => {
+    setInitialFilterState();
+  }, 0);
 }
 
 // Set initial filter state for all filter buttons
 function setInitialFilterState() {
   filterBtns.forEach(btn => {
-    if (btn.textContent === currentFilter) {
+    if (btn.textContent.trim() === currentFilter) {
       btn.classList.add('active');
     } else {
       btn.classList.remove('active');
@@ -91,14 +93,22 @@ function setupEventListeners() {
     btn.addEventListener('click', clearCompleted);
   });
 
-  // Filter buttons
+  // Filter buttons - ensure ALL buttons (mobile and desktop) are synced
   filterBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
-      // Remove active class from all filters
+      const selectedFilter = e.target.textContent.trim();
+      
+      // Remove active class from ALL filters (mobile and desktop)
       filterBtns.forEach(f => f.classList.remove('active'));
-      // Add active class to clicked filter
-      e.target.classList.add('active');
-      currentFilter = e.target.textContent;
+      
+      // Add active class to ALL filters with the same text content
+      filterBtns.forEach(f => {
+        if (f.textContent.trim() === selectedFilter) {
+          f.classList.add('active');
+        }
+      });
+      
+      currentFilter = selectedFilter;
       renderTodos();
     });
   });
@@ -295,12 +305,6 @@ function handleDragStart(e) {
   this.style.opacity = '0.4';
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/html', this.innerHTML);
-  
-  // Prevent text selection during drag
-  if (e.target.tagName === 'P') {
-    e.preventDefault();
-    return false;
-  }
 }
 
 function handleDragEnd(e) {
