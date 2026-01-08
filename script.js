@@ -24,27 +24,32 @@ const clearCompletedBtns = document.querySelectorAll('.clear-completed');
 let todos = [];
 let currentFilter = 'All';
 let draggedElement = null;
-let draggedIndex = -1;
 
 // Initialize app
 function init() {
-  // Load todos from localStorage or use existing HTML todos
   loadTodos();
   setupEventListeners();
   renderTodos();
   updateItemsLeft();
-  updateFilterButtons();
+  // Update filter buttons
+  requestAnimationFrame(() => {
+    updateFilterButtons();
+  });
 }
 
 // Update filter buttons to show active state
 function updateFilterButtons() {
   const allFilterBtns = document.querySelectorAll('.filter');
+  
   allFilterBtns.forEach(btn => {
     const btnText = btn.textContent.trim();
+    btn.classList.remove('active');
+    
     if (btnText === currentFilter) {
       btn.classList.add('active');
+      btn.style.color = 'hsl(220, 98%, 61%)';
     } else {
-      btn.classList.remove('active');
+      btn.style.color = '';
     }
   });
 }
@@ -54,10 +59,8 @@ function loadTodos() {
   const savedTodos = localStorage.getItem('todos');
   
   if (savedTodos) {
-    // Load from localStorage
     todos = JSON.parse(savedTodos);
   } else {
-    // Load existing todos from HTML into our todos array (first time only)
     const existingContainers = document.querySelectorAll('.todo-container');
     existingContainers.forEach(container => {
       const text = container.querySelector('.todo-text').textContent;
@@ -67,7 +70,6 @@ function loadTodos() {
         completed: false
       });
     });
-    // Save to localStorage
     saveTodos();
   }
 }
@@ -79,7 +81,6 @@ function saveTodos() {
 
 // Setup event listeners
 function setupEventListeners() {
-  // Add todo on Enter key
   todoInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && todoInput.value.trim() !== '') {
       addTodo(todoInput.value.trim());
@@ -87,12 +88,10 @@ function setupEventListeners() {
     }
   });
 
-  // Clear completed buttons
   clearCompletedBtns.forEach(btn => {
     btn.addEventListener('click', clearCompleted);
   });
 
-  // Filter buttons - setup after render
   setupFilterButtons();
 }
 
@@ -101,6 +100,7 @@ function setupFilterButtons() {
   const allFilterBtns = document.querySelectorAll('.filter');
   allFilterBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
+      e.preventDefault();
       const selectedFilter = e.target.textContent.trim();
       currentFilter = selectedFilter;
       updateFilterButtons();
@@ -172,7 +172,6 @@ function getFilteredTodos() {
 
 // Render todos
 function renderTodos() {
-  // Remove all existing todo-containers and lines
   const existingContainers = todoList.querySelectorAll('.todo-container');
   const existingLines = todoList.querySelectorAll('.line');
   existingContainers.forEach(c => c.remove());
@@ -184,17 +183,14 @@ function renderTodos() {
                        todoList.querySelector('.desktop-version');
 
   filteredTodos.forEach((todo, index) => {
-    // Create todo container
     const container = createTodoElement(todo);
     
-    // Insert before analytics section
     if (analyticsDiv) {
       todoList.insertBefore(container, analyticsDiv);
     } else {
       todoList.appendChild(container);
     }
 
-    // Add line separator after each item (including the last one)
     const line = document.createElement('div');
     line.className = 'line';
     if (analyticsDiv) {
@@ -212,14 +208,12 @@ function createTodoElement(todo) {
   container.setAttribute('draggable', 'true');
   container.dataset.id = todo.id;
   
-  // Add smooth transition for drag operations
-  container.style.transition = 'transform 0.3s ease, opacity 0.2s ease, box-shadow 0.2s ease';
+  // Smooth transitions only for opacity and box-shadow
+  container.style.transition = 'opacity 0.2s ease, box-shadow 0.2s ease';
 
-  // Create rounded checkbox
   const rounded = document.createElement('div');
   rounded.className = 'rounded2';
   
-  // Add checkmark if completed
   if (todo.completed) {
     const checkmark = document.createElement('img');
     checkmark.src = 'images/icon-check.svg';
@@ -230,11 +224,9 @@ function createTodoElement(todo) {
     rounded.style.border = 'none';
   }
 
-  // Create todo text
   const text = document.createElement('p');
   text.className = 'todo-text';
   text.textContent = todo.text;
-  // Prevent text selection on mobile during drag
   text.style.userSelect = 'none';
   text.style.webkitUserSelect = 'none';
   text.style.webkitTouchCallout = 'none';
@@ -244,19 +236,16 @@ function createTodoElement(todo) {
     text.style.opacity = '0.5';
   }
 
-  // Create delete button
   const deleteBtn = document.createElement('img');
   deleteBtn.src = 'images/icon-cross.svg';
   deleteBtn.alt = 'cross';
   deleteBtn.className = 'delete-btn';
   deleteBtn.style.display = 'none';
 
-  // Append elements
   container.appendChild(rounded);
   container.appendChild(text);
   container.appendChild(deleteBtn);
 
-  // Event listeners
   container.addEventListener('click', (e) => {
     if (!e.target.classList.contains('delete-btn')) {
       toggleTodo(todo.id);
@@ -285,27 +274,19 @@ function createTodoElement(todo) {
   container.addEventListener('dragleave', handleDragLeave);
   
   // Touch events for mobile
-  let touchStartY = 0;
   let touchTimeout = null;
   
   container.addEventListener('touchstart', (e) => {
-    touchStartY = e.touches[0].clientY;
-    // Long press detection
     touchTimeout = setTimeout(() => {
-      // Trigger drag mode on mobile
       container.style.opacity = '0.7';
-      container.style.transform = 'scale(1.05)';
       container.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
-      container.style.zIndex = '1000';
     }, 200);
   }, { passive: true });
   
   container.addEventListener('touchend', (e) => {
     clearTimeout(touchTimeout);
     container.style.opacity = '1';
-    container.style.transform = 'scale(1)';
     container.style.boxShadow = 'none';
-    container.style.zIndex = 'auto';
   }, { passive: true });
   
   container.addEventListener('touchmove', (e) => {
@@ -318,34 +299,26 @@ function createTodoElement(todo) {
 // ========== DRAG AND DROP ==========
 function handleDragStart(e) {
   draggedElement = this;
-  draggedIndex = Array.from(todoList.querySelectorAll('.todo-container')).indexOf(this);
   
-  // Visual feedback - lift up the dragged element
+  // Visual feedback - just opacity and shadow, NO transform
   this.style.opacity = '0.5';
-  this.style.transform = 'scale(1.05)';
   this.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
-  this.style.zIndex = '1000';
   
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/html', this.innerHTML);
 }
 
 function handleDragEnd(e) {
-  // Reset styles
+  // Reset the dragged element
   this.style.opacity = '1';
-  this.style.transform = 'scale(1)';
-  this.style.boxShadow = 'none';
-  this.style.zIndex = 'auto';
+  this.style.boxShadow = '';
   
-  // Remove all drag-over indicators
+  // Clear all borders
   document.querySelectorAll('.todo-container').forEach(container => {
-    container.style.transform = 'translateY(0)';
-    container.style.marginTop = '';
-    container.style.marginBottom = '';
+    container.style.borderTop = '';
   });
   
   draggedElement = null;
-  draggedIndex = -1;
 }
 
 function handleDragOver(e) {
@@ -353,43 +326,11 @@ function handleDragOver(e) {
     e.preventDefault();
   }
   e.dataTransfer.dropEffect = 'move';
-  
-  // Real-time reordering preview
-  if (draggedElement && this !== draggedElement) {
-    const containers = Array.from(todoList.querySelectorAll('.todo-container'));
-    const currentIndex = containers.indexOf(this);
-    
-    // Clear previous transforms
-    containers.forEach(container => {
-      if (container !== draggedElement) {
-        container.style.transform = 'translateY(0)';
-      }
-    });
-    
-    // Apply new transforms based on drag position
-    if (currentIndex > draggedIndex) {
-      // Dragging down - shift items up
-      for (let i = draggedIndex + 1; i <= currentIndex; i++) {
-        if (containers[i] && containers[i] !== draggedElement) {
-          containers[i].style.transform = 'translateY(-60px)';
-        }
-      }
-    } else if (currentIndex < draggedIndex) {
-      // Dragging up - shift items down
-      for (let i = currentIndex; i < draggedIndex; i++) {
-        if (containers[i] && containers[i] !== draggedElement) {
-          containers[i].style.transform = 'translateY(60px)';
-        }
-      }
-    }
-  }
-  
   return false;
 }
 
 function handleDragEnter(e) {
   if (this !== draggedElement && draggedElement) {
-    // Visual indicator
     this.style.borderTop = '3px solid hsl(220, 98%, 61%)';
   }
 }
@@ -402,7 +343,10 @@ function handleDrop(e) {
   if (e.stopPropagation) {
     e.stopPropagation();
   }
-  
+  if (e.preventDefault) {
+    e.preventDefault();
+  }
+
   this.style.borderTop = '';
 
   if (draggedElement && draggedElement !== this) {
@@ -410,17 +354,20 @@ function handleDrop(e) {
     const draggedId = parseInt(draggedElement.dataset.id);
     const targetId = parseInt(this.dataset.id);
 
-    // Find indices in the todos array
-    const draggedTodoIndex = todos.findIndex(t => t.id === draggedId);
-    const targetTodoIndex = todos.findIndex(t => t.id === targetId);
+    // Find indices in todos array
+    const draggedIndex = todos.findIndex(t => t.id === draggedId);
+    const targetIndex = todos.findIndex(t => t.id === targetId);
 
-    // Reorder array
-    const [removed] = todos.splice(draggedTodoIndex, 1);
-    todos.splice(targetTodoIndex, 0, removed);
+    if (draggedIndex !== -1 && targetIndex !== -1) {
+      // Remove from old position
+      const [removed] = todos.splice(draggedIndex, 1);
+      // Insert at new position
+      todos.splice(targetIndex, 0, removed);
 
-    // Save and re-render
-    saveTodos();
-    renderTodos();
+      // Save and re-render
+      saveTodos();
+      renderTodos();
+    }
   }
 
   return false;

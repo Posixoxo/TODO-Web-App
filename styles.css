@@ -146,6 +146,7 @@ header,
   
   .input:hover{
     border: 1px solid var(--text-muted);
+    transition: border 0.8s ease-in-out;
   }
   
   .input:focus{
