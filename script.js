@@ -20,11 +20,11 @@ const todoInput = document.getElementById('todo-input');
 const todoList = document.querySelector('.todo-list');
 const itemsLeftElements = document.querySelectorAll('.items-left');
 const clearCompletedBtns = document.querySelectorAll('.clear-completed');
-const filterBtns = document.querySelectorAll('.filter');
 
 let todos = [];
 let currentFilter = 'All';
 let draggedElement = null;
+let draggedIndex = -1;
 
 // Initialize app
 function init() {
@@ -33,16 +33,15 @@ function init() {
   setupEventListeners();
   renderTodos();
   updateItemsLeft();
-  // Set initial filter state - must be called AFTER everything is set up
-  setTimeout(() => {
-    setInitialFilterState();
-  }, 0);
+  updateFilterButtons();
 }
 
-// Set initial filter state for all filter buttons
-function setInitialFilterState() {
-  filterBtns.forEach(btn => {
-    if (btn.textContent.trim() === currentFilter) {
+// Update filter buttons to show active state
+function updateFilterButtons() {
+  const allFilterBtns = document.querySelectorAll('.filter');
+  allFilterBtns.forEach(btn => {
+    const btnText = btn.textContent.trim();
+    if (btnText === currentFilter) {
       btn.classList.add('active');
     } else {
       btn.classList.remove('active');
@@ -93,22 +92,18 @@ function setupEventListeners() {
     btn.addEventListener('click', clearCompleted);
   });
 
-  // Filter buttons - ensure ALL buttons (mobile and desktop) are synced
-  filterBtns.forEach(btn => {
+  // Filter buttons - setup after render
+  setupFilterButtons();
+}
+
+// Setup filter button listeners
+function setupFilterButtons() {
+  const allFilterBtns = document.querySelectorAll('.filter');
+  allFilterBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
       const selectedFilter = e.target.textContent.trim();
-      
-      // Remove active class from ALL filters (mobile and desktop)
-      filterBtns.forEach(f => f.classList.remove('active'));
-      
-      // Add active class to ALL filters with the same text content
-      filterBtns.forEach(f => {
-        if (f.textContent.trim() === selectedFilter) {
-          f.classList.add('active');
-        }
-      });
-      
       currentFilter = selectedFilter;
+      updateFilterButtons();
       renderTodos();
     });
   });
@@ -216,6 +211,9 @@ function createTodoElement(todo) {
   container.className = 'todo-container';
   container.setAttribute('draggable', 'true');
   container.dataset.id = todo.id;
+  
+  // Add smooth transition for drag operations
+  container.style.transition = 'transform 0.3s ease, opacity 0.2s ease, box-shadow 0.2s ease';
 
   // Create rounded checkbox
   const rounded = document.createElement('div');
@@ -286,14 +284,32 @@ function createTodoElement(todo) {
   container.addEventListener('dragenter', handleDragEnter);
   container.addEventListener('dragleave', handleDragLeave);
   
-  // Prevent default touch behavior that causes text selection/search on mobile
+  // Touch events for mobile
+  let touchStartY = 0;
+  let touchTimeout = null;
+  
   container.addEventListener('touchstart', (e) => {
-    // Allow touch to work but prevent text selection
-    e.currentTarget.style.cursor = 'grabbing';
+    touchStartY = e.touches[0].clientY;
+    // Long press detection
+    touchTimeout = setTimeout(() => {
+      // Trigger drag mode on mobile
+      container.style.opacity = '0.7';
+      container.style.transform = 'scale(1.05)';
+      container.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
+      container.style.zIndex = '1000';
+    }, 200);
   }, { passive: true });
   
   container.addEventListener('touchend', (e) => {
-    e.currentTarget.style.cursor = 'pointer';
+    clearTimeout(touchTimeout);
+    container.style.opacity = '1';
+    container.style.transform = 'scale(1)';
+    container.style.boxShadow = 'none';
+    container.style.zIndex = 'auto';
+  }, { passive: true });
+  
+  container.addEventListener('touchmove', (e) => {
+    clearTimeout(touchTimeout);
   }, { passive: true });
 
   return container;
@@ -302,18 +318,34 @@ function createTodoElement(todo) {
 // ========== DRAG AND DROP ==========
 function handleDragStart(e) {
   draggedElement = this;
-  this.style.opacity = '0.4';
+  draggedIndex = Array.from(todoList.querySelectorAll('.todo-container')).indexOf(this);
+  
+  // Visual feedback - lift up the dragged element
+  this.style.opacity = '0.5';
+  this.style.transform = 'scale(1.05)';
+  this.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
+  this.style.zIndex = '1000';
+  
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/html', this.innerHTML);
 }
 
 function handleDragEnd(e) {
+  // Reset styles
   this.style.opacity = '1';
+  this.style.transform = 'scale(1)';
+  this.style.boxShadow = 'none';
+  this.style.zIndex = 'auto';
   
-  // Remove all drag-over classes
+  // Remove all drag-over indicators
   document.querySelectorAll('.todo-container').forEach(container => {
-    container.style.borderTop = '';
+    container.style.transform = 'translateY(0)';
+    container.style.marginTop = '';
+    container.style.marginBottom = '';
   });
+  
+  draggedElement = null;
+  draggedIndex = -1;
 }
 
 function handleDragOver(e) {
@@ -321,12 +353,44 @@ function handleDragOver(e) {
     e.preventDefault();
   }
   e.dataTransfer.dropEffect = 'move';
+  
+  // Real-time reordering preview
+  if (draggedElement && this !== draggedElement) {
+    const containers = Array.from(todoList.querySelectorAll('.todo-container'));
+    const currentIndex = containers.indexOf(this);
+    
+    // Clear previous transforms
+    containers.forEach(container => {
+      if (container !== draggedElement) {
+        container.style.transform = 'translateY(0)';
+      }
+    });
+    
+    // Apply new transforms based on drag position
+    if (currentIndex > draggedIndex) {
+      // Dragging down - shift items up
+      for (let i = draggedIndex + 1; i <= currentIndex; i++) {
+        if (containers[i] && containers[i] !== draggedElement) {
+          containers[i].style.transform = 'translateY(-60px)';
+        }
+      }
+    } else if (currentIndex < draggedIndex) {
+      // Dragging up - shift items down
+      for (let i = currentIndex; i < draggedIndex; i++) {
+        if (containers[i] && containers[i] !== draggedElement) {
+          containers[i].style.transform = 'translateY(60px)';
+        }
+      }
+    }
+  }
+  
   return false;
 }
 
 function handleDragEnter(e) {
-  if (this !== draggedElement) {
-    this.style.borderTop = '2px solid hsl(220, 98%, 61%)';
+  if (this !== draggedElement && draggedElement) {
+    // Visual indicator
+    this.style.borderTop = '3px solid hsl(220, 98%, 61%)';
   }
 }
 
@@ -338,26 +402,27 @@ function handleDrop(e) {
   if (e.stopPropagation) {
     e.stopPropagation();
   }
+  
+  this.style.borderTop = '';
 
-  if (draggedElement !== this) {
+  if (draggedElement && draggedElement !== this) {
     // Get IDs
     const draggedId = parseInt(draggedElement.dataset.id);
     const targetId = parseInt(this.dataset.id);
 
-    // Find indices
-    const draggedIndex = todos.findIndex(t => t.id === draggedId);
-    const targetIndex = todos.findIndex(t => t.id === targetId);
+    // Find indices in the todos array
+    const draggedTodoIndex = todos.findIndex(t => t.id === draggedId);
+    const targetTodoIndex = todos.findIndex(t => t.id === targetId);
 
     // Reorder array
-    const [removed] = todos.splice(draggedIndex, 1);
-    todos.splice(targetIndex, 0, removed);
+    const [removed] = todos.splice(draggedTodoIndex, 1);
+    todos.splice(targetTodoIndex, 0, removed);
 
     // Save and re-render
     saveTodos();
     renderTodos();
   }
 
-  this.style.borderTop = '';
   return false;
 }
 
